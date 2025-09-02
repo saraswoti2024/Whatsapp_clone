@@ -138,8 +138,8 @@ REST_FRAMEWORK = {
 from datetime import timedelta
 
 SIMPLE_JWT = {
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
     'ACCESS_TOKEN_LIFETIME': timedelta(days=1),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
 }
 
 CHANNEL_LAYERS = {
@@ -148,3 +148,10 @@ CHANNEL_LAYERS = {
     }
 }
 
+STATICFILES_DIRS = [
+    BASE_DIR / "static",
+]
+
+#image configuration (to display)
+MEDIA_URL = '/mymedia/'
+MEDIA_ROOT = BASE_DIR / 'media'

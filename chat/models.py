@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
+from phonenumber_field.modelfields import PhoneNumberField
 
 class Message(models.Model):
     sender = models.ForeignKey(User, on_delete=models.CASCADE, related_name='sent')
@@ -30,6 +31,13 @@ class GroupMember(models.Model):
     user_name = models.ForeignKey(User,on_delete=models.CASCADE,related_name='user_Group')
     approved_date = models.DateTimeField(auto_now_add=True)
     group_name = models.ForeignKey(Group,on_delete = models.CASCADE,related_name="group_member")
-    
+
     class Meta:
         unique_together = ['user_name', 'group_name']
+
+class Profile(models.Model):
+    user = models.OneToOneField(User,on_delete=models.CASCADE,related_name='user_profile')
+    image = models.ImageField(upload_to="profile_image",null=True,blank=True)
+    about = models.TextField()
+    phone = PhoneNumberField(blank=True,null=True)
+    status = models.BooleanField(default=False)
