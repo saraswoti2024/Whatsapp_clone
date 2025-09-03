@@ -8,3 +8,12 @@ class ProfileSerializer(serializers.ModelSerializer):
         read_only_fields = ['user']
 
 
+class MessageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Message 
+        fields = '__all__'
+
+class GroupSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = GroupMessage 
+        fields = '__all__'

@@ -5,6 +5,8 @@ from .models import *
 from django.db.models import Q
 from asgiref.sync import sync_to_async
 from django.core.serializers.json import DjangoJSONEncoder
+from urllib.parse import urlparse, parse_qs, urljoin
+from .serializers import *
 
 class ChatConsumer(AsyncWebsocketConsumer):
 
@@ -109,27 +111,59 @@ class GroupConsumer(AsyncWebsocketConsumer):
         self.user = self.scope['user'].username
         self.group_name = self.scope['url_route']['kwargs']['group_name']
 
+        # Always accept handshake first
+        await self.accept()
+
         if not self.me:
-            await self.accept()
-            await self.send(text_data = json.dumps({'error':'not authenticated'}))
-            await self.close()
-            return 
-        self.country = await sync_to_async(Group.objects.get)(group_name=self.group_name)
-
-        if await sync_to_async( lambda: GroupMember.objects.filter(group_name_id=self.country.id, user_name_id=self.me,approved=True).exists()
-            )():
-            await self.channel_layer.group_add(self.group_name,self.channel_name)
-            await self.accept()
-
-        else:
-            await sync_to_async(GroupMember.objects.get_or_create)(
-            user_name_id = self.me,
-            group_name_id = self.country.id,
-            )
-            await self.accept()
-            await self.send(text_data = json.dumps({'error': 'you are not a member wait for admin approval'}))
+            await self.send(text_data=json.dumps({'error':'not authenticated'}))
             await self.close()
             return
+
+        # --------------------------- search -----------------------------------------
+        query_string = self.scope['query_string'].decode() 
+        params = parse_qs(query_string)
+        search_term = params.get('search_term', [None])[0] 
+
+        group = await sync_to_async(Group.objects.get)(group_name=self.group_name)
+        self.group_id = group.id  
+
+        if search_term:
+                value2 = await sync_to_async(list)(
+                GroupMessage.objects.filter(group_name1_id=self.group_id).filter(
+                    Q(content__icontains=search_term) |
+                    Q(sender__username__icontains=search_term) | Q(group_name1__group_name__icontains=search_term)
+                        ).select_related('group_name1', 'sender')
+                        .order_by("-timestamp")
+                    )
+                print("_________________--")
+                print(value2,'value2')
+    
+                vs = GroupSerializer(value2, many=True)
+                await self.send(text_data=json.dumps({'data': vs.data}))
+
+
+        # ------------------- check membership --------------------------------------
+        country = await sync_to_async(Group.objects.get)(group_name=self.group_name)
+        is_member = await sync_to_async(
+            lambda: GroupMember.objects.filter(
+                group_name_id=country.id,
+                user_name_id=self.me,
+                approved=True
+            ).exists()
+        )()
+
+        if is_member:
+            await self.channel_layer.group_add(self.group_name, self.channel_name)
+        else:
+            # Create pending membership
+            await sync_to_async(GroupMember.objects.get_or_create)(
+                user_name_id=self.me,
+                group_name_id=country.id,
+            )
+            await self.send(text_data=json.dumps({
+                'error': 'you are not a member, wait for admin approval'
+            }))
+            await self.close()
 
     async def disconnect(self,code):
         await self.channel_layer.group_discard(self.group_name, self.channel_name)

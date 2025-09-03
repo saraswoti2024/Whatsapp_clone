@@ -6,6 +6,8 @@ class Message(models.Model):
     sender = models.ForeignKey(User, on_delete=models.CASCADE, related_name='sent')
     receiver = models.ForeignKey(User, on_delete=models.CASCADE, related_name='received')
     content = models.TextField()
+    image_shared = models.ImageField(upload_to="personal_chat_image",null=True,blank=True)
+    file_shared = models.FileField(upload_to="personalchat_file",null=True,blank=True)
     timestamp = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
@@ -21,6 +23,8 @@ class GroupMessage(models.Model):
     sender = models.ForeignKey(User,on_delete=models.CASCADE,related_name='group_sent')
     timestamp = models.DateTimeField(auto_now_add=True)
     content = models.TextField()
+    image_shared = models.ImageField(upload_to="group_chat_image",null=True,blank=True)
+    file_shared = models.FileField(upload_to="groupchat_file",null=True,blank=True)
     group_name1 = models.ForeignKey(Group,on_delete = models.CASCADE,related_name="group_message")
 
     def __str__(self):
