@@ -1,0 +1,42 @@
+consumers bata search
+
+personal 
+      # searchh
+        query_string = self.scope['query_string'].decode() #binary to string  
+        params = parse_qs(query_string)
+        search_term = params.get('search_term', [None])[0] 
+
+        if search_term: 
+            def searchf(search_term,group_name):
+                print("__________")
+                print(group_name)
+                value = Message.objects.filter(title=group_name).filter(Q(content__icontains=search_term) | Q(receiver__username__icontains=search_term) | Q(sender__username__icontains=search_term)).select_related('sender','receiver')
+                return value
+            
+            value = await sync_to_async(list)(searchf(search_term,self.room_group_name))
+            v2 = MessageSerializer(value,many=True)
+            await self.send(json.dumps({'data' : v2.data}))
+
+group
+
+        # --------------------------- search -----------------------------------------
+        query_string = self.scope['query_string'].decode() 
+        params = parse_qs(query_string)
+        search_term = params.get('search_term', [None])[0] 
+
+        group = await sync_to_async(Group.objects.get)(group_name=self.group_name)
+        self.group_id = group.id  
+
+        if search_term:
+                value2 = await sync_to_async(list)(
+                GroupMessage.objects.filter(group_name1_id=self.group_id).filter(
+                    Q(content__icontains=search_term) |
+                    Q(sender__username__icontains=search_term) | Q(group_name1__group_name__icontains=search_term)
+                        ).select_related('group_name1', 'sender')
+                        .order_by("-timestamp")
+                    )
+                print("_________________--")
+                print(value2,'value2')
+    
+                vs = GroupSerializer(value2, many=True)
+                await self.send(text_data=json.dumps({'data': vs.data}))

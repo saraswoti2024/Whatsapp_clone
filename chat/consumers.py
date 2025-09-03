@@ -11,34 +11,21 @@ from .serializers import *
 class ChatConsumer(AsyncWebsocketConsumer):
 
     async def connect(self):
-        print(self.scope,'scops')
-        
         #authenticated user id
         self.me = self.scope.get('user_id')
-        # self.me['user_id'] =  #sender
-        # self.me = await sync_to_async (User.objects.get)(id=self.scope["user_id"])
-        # self.me['id'] = self.scope['user_id']
-        print('____________________________________')
-        print(self.me,'value from self.me')
-        print('____________________________________')
-        # self.other_userid = self.scope['url_route']['kwargs'].get('user_id') #reciever
-        
-        # print(f"DEBUG: self.me = {self.me}, id = {self.me.id}")
-        # print(f"DEBUG: other_userid from URL = {self.other_userid}")
-
         #from endpoint path bata aako id
         self.other_userid = self.scope.get('url_route').get('kwargs').get('user_id') #reciever 
-        print(self.other_userid,'other user id')
 
         self.room_name = None
         self.room_group_name = None
+
+        await self.accept()
 
         if self.other_userid is None:
             await self.close()
             return
 
-        if not self.me :
-            await self.accept()
+        if not self.me : 
             await self.send(text_data=json.dumps({"error": "Authentication required"}))
             await self.close()
             return 
@@ -46,11 +33,12 @@ class ChatConsumer(AsyncWebsocketConsumer):
         self.room_name = self.get_room_name(self.me, self.other_userid)
         self.room_group_name = f'chat_{str(self.room_name)}'   
         await self.channel_layer.group_add(self.room_group_name,self.channel_name)
-        await self.accept()
+
+  
     
+      
     async def disconnect(self,code):
-        await self.channel_layer.group_discard(self.room_group_name, self.channel_name)
-    
+      await self.channel_layer.group_discard(self.room_group_name, self.channel_name)
 
     async def receive(self,text_data):
         print(text_data,'data in text')
@@ -63,6 +51,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
             sender_id = self.me,
             receiver = receiver,
             content = message,
+            title =  self.room_group_name,
         )
 
         await self.channel_layer.group_send(
@@ -79,7 +68,8 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 'history1' : history,
                 'userid' : self.me,
             }
-        )    
+        )   
+
     async def chat_message(self,event):
             await self.send(text_data = json.dumps({
                 'message' : event['message'],
@@ -119,27 +109,6 @@ class GroupConsumer(AsyncWebsocketConsumer):
             await self.close()
             return
 
-        # --------------------------- search -----------------------------------------
-        query_string = self.scope['query_string'].decode() 
-        params = parse_qs(query_string)
-        search_term = params.get('search_term', [None])[0] 
-
-        group = await sync_to_async(Group.objects.get)(group_name=self.group_name)
-        self.group_id = group.id  
-
-        if search_term:
-                value2 = await sync_to_async(list)(
-                GroupMessage.objects.filter(group_name1_id=self.group_id).filter(
-                    Q(content__icontains=search_term) |
-                    Q(sender__username__icontains=search_term) | Q(group_name1__group_name__icontains=search_term)
-                        ).select_related('group_name1', 'sender')
-                        .order_by("-timestamp")
-                    )
-                print("_________________--")
-                print(value2,'value2')
-    
-                vs = GroupSerializer(value2, many=True)
-                await self.send(text_data=json.dumps({'data': vs.data}))
 
 
         # ------------------- check membership --------------------------------------

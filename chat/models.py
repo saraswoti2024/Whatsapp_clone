@@ -9,6 +9,7 @@ class Message(models.Model):
     image_shared = models.ImageField(upload_to="personal_chat_image",null=True,blank=True)
     file_shared = models.FileField(upload_to="personalchat_file",null=True,blank=True)
     timestamp = models.DateTimeField(auto_now_add=True)
+    title = models.CharField(max_length=100,default="no_name")
 
     def __str__(self):
         return f"{self.sender} → {self.receiver}: {self.content}"
