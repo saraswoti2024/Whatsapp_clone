@@ -126,6 +126,15 @@ class GroupConsumer(AsyncWebsocketConsumer):
             }))
             await self.close()
 
+#-------------------------history------------------------# 
+        history = await self.get_chat_history(country,self.me)
+        await self.send(text_data = json.dumps({'chat_history' : history},cls=DjangoJSONEncoder))
+
+    @sync_to_async
+    def get_chat_history(self,group,me):
+        message  = GroupMessage.objects.filter(Q(group_name1__id = group.id)).order_by('-timestamp').values(
+                'sender__username', 'content', 'timestamp','group_name1__group_name')
+        return list(message)  
      
 
     async def disconnect(self,code):
@@ -155,9 +164,9 @@ class GroupConsumer(AsyncWebsocketConsumer):
             'username' : self.scope['user'].username
          })
 
-         self.c =  await sync_to_async(lambda: GroupMember.objects.filter(group_name_id=self.group_obj.id, user_name_id=self.me))()
-        
+         self.c =  await sync_to_async(lambda: GroupMember.objects.filter(group_name_id=self.group_obj.id,    user_name_id=self.me))()
          await sync_to_async(self.c.update)(approved=True)
+         
     
     async def group_message(self,event):
             await self.send(text_data = json.dumps({
