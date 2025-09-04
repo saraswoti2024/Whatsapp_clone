@@ -112,10 +112,10 @@ class GroupConsumer(AsyncWebsocketConsumer):
 
 
         # ------------------- check membership --------------------------------------
-        country = await sync_to_async(Group.objects.get)(group_name=self.group_name)
+        country, created = await sync_to_async(Group.objects.get_or_create)(group_name=self.group_name)
         is_member = await sync_to_async(
             lambda: GroupMember.objects.filter(
-                group_name_id=country.id,
+                group_name_id= country.id,
                 user_name_id=self.me,
                 approved=True
             ).exists()
@@ -144,14 +144,15 @@ class GroupConsumer(AsyncWebsocketConsumer):
          print('---------------------------')
          message = data['message']
 
-         group_obj,created = await sync_to_async(Group.objects.get_or_create)(
+         self.group_obj,created = await sync_to_async(Group.objects.get_or_create)(
             group_name = self.group_name
          )
+
          
          await sync_to_async(GroupMessage.objects.create)(
             sender_id = self.me,
+            group_name1_id = self.group_obj.id,
             content = message,
-            group_name1 = group_obj,
          )
 
          await self.channel_layer.group_send(self.group_name,{  
@@ -159,8 +160,8 @@ class GroupConsumer(AsyncWebsocketConsumer):
             'message' : message,
             'username' : self.scope['user'].username
          })
-         self.country = await sync_to_async(Group.objects.get)(group_name=self.group_name)
-         self.c =  await sync_to_async(lambda: GroupMember.objects.filter(group_name_id=self.country.id, user_name_id=self.me))()
+
+         self.c =  await sync_to_async(lambda: GroupMember.objects.filter(group_name_id=self.group_obj.id, user_name_id=self.me))()
         
          await sync_to_async(self.c.update)(approved=True)
     

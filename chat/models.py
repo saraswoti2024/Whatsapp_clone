@@ -16,20 +16,9 @@ class Message(models.Model):
 
 
 class Group(models.Model):
-      group_name = models.SlugField(max_length=200,default='no_name')
+      group_name = models.CharField(max_length=200,default='no_name',unique=True)
       def __str__(self):
         return self.group_name
-
-class GroupMessage(models.Model):
-    sender = models.ForeignKey(User,on_delete=models.CASCADE,related_name='group_sent')
-    timestamp = models.DateTimeField(auto_now_add=True)
-    content = models.TextField()
-    image_shared = models.ImageField(upload_to="group_chat_image",null=True,blank=True)
-    file_shared = models.FileField(upload_to="groupchat_file",null=True,blank=True)
-    group_name1 = models.ForeignKey(Group,on_delete = models.CASCADE,related_name="group_message")
-
-    def __str__(self):
-        return f"{self.group_name1}"
 
 class GroupMember(models.Model):
     approved = models.BooleanField(default=False) 
@@ -39,6 +28,23 @@ class GroupMember(models.Model):
 
     class Meta:
         unique_together = ['user_name', 'group_name']
+    
+    def __str__(self):
+        return f"{str(self.approved)}"
+
+class GroupMessage(models.Model):
+    sender = models.ForeignKey(User,on_delete=models.CASCADE,related_name='group_sent')
+    timestamp = models.DateTimeField(auto_now_add=True)
+    content = models.TextField()
+    image_shared = models.ImageField(upload_to="group_chat_image",null=True,blank=True)
+    file_shared = models.FileField(upload_to="groupchat_file",null=True,blank=True)
+    group_name1 = models.ForeignKey(Group,on_delete = models.CASCADE,related_name="group_message")
+    group_member = models.ForeignKey(GroupMember,on_delete=models.CASCADE,related_name="group_members",null=True,blank=True)
+
+    def __str__(self):
+        return f"{self.group_name1}"
+
+
 
 class Profile(models.Model):
     user = models.OneToOneField(User,on_delete=models.CASCADE,related_name='user_profile')

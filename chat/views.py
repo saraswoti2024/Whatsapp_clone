@@ -43,8 +43,9 @@ class SearchAll(APIView):
         search = self.request.query_params.get('search',None)
         if search:
            
-            v1 = GroupMessage.objects.filter(sender__id=request.user.id).filter(Q(content__icontains=search) | Q(group_name1__group_name__icontains=search) | Q(sender__username__icontains=search)).select_related('sender','group_name1')
-            v2 = Message.objects.filter(sender__id=request.user.id).filter(Q(content__icontains=search) | Q(receiver__username__icontains=search) | Q(sender__username__icontains=search)).select_related('sender','receiver')
+            v2 = Message.objects.filter(sender=request.user).filter(Q(content__icontains=search) | Q(receiver__username__icontains=search) | Q(sender__username__icontains=search)).select_related('sender','receiver')
+
+            v1 = GroupMessage.objects.filter(group_member__user_name=request.user).filter(Q(content__icontains=search) | Q(group_name1__group_name__icontains=search) | Q(sender__username__icontains=search)).select_related('sender','group_name1','group_member')
                 
  
             native = GroupSerializer(v1,many=True)
