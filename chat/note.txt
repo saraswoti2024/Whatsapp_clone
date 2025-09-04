@@ -40,3 +40,17 @@ group
     
                 vs = GroupSerializer(value2, many=True)
                 await self.send(text_data=json.dumps({'data': vs.data}))
+
+        await self.channel_layer.group_send(
+            self.room_group_name,{
+                'type' : 'chat_history',
+                'history1' : history,
+                'username' : self.user,
+            }
+        ) 
+
+        async def chat_history(self,event):
+            await self.send(text_data = json.dumps({
+                'message' : event['history1'],
+                'username'  : event['username'],
+            },cls=DjangoJSONEncoder))

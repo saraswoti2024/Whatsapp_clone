@@ -13,6 +13,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
     async def connect(self):
         #authenticated user id
         self.me = self.scope.get('user_id')
+        self.user = self.scope['user'].username
         #from endpoint path bata aako id
         self.other_userid = self.scope.get('url_route').get('kwargs').get('user_id') #reciever 
 
@@ -34,7 +35,18 @@ class ChatConsumer(AsyncWebsocketConsumer):
         self.room_group_name = f'chat_{str(self.room_name)}'   
         await self.channel_layer.group_add(self.room_group_name,self.channel_name)
 
-  
+            
+        history = await self.get_chat_history(self.me,self.other_userid)
+        await self.send(text_data = json.dumps({'chat_history' : history},cls=DjangoJSONEncoder))
+
+    @sync_to_async
+    def get_chat_history(self,id1,id2):
+        message  = Message.objects.filter(
+                Q(sender_id = id1, receiver_id = id2)| 
+                Q(sender_id = id2, receiver_id = id1)
+            ).order_by('-timestamp').values(
+                'sender__username', 'content', 'timestamp')
+        return list(message)       
     
       
     async def disconnect(self,code):
@@ -45,7 +57,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
         data = json.loads(text_data)
         message = data['message']
         receiver = await sync_to_async(User.objects.get)(id = self.other_userid )
-        history = await self.get_chat_history(self.me,self.other_userid)
+       
         
         await sync_to_async(Message.objects.create)(
             sender_id = self.me,
@@ -58,44 +70,26 @@ class ChatConsumer(AsyncWebsocketConsumer):
             self.room_group_name,{
                 'type' : 'chat_message',
                 'message' : message,
-                'userid' : self.me,
+                'username' : self.user,
             }
         )    
 
-        await self.channel_layer.group_send(
-            self.room_group_name,{
-                'type' : 'chat_history',
-                'history1' : history,
-                'userid' : self.me,
-            }
-        )   
+     
 
     async def chat_message(self,event):
             await self.send(text_data = json.dumps({
                 'message' : event['message'],
-                'userid'  : event['userid'],
+                'username'  : event['username'],
             }))
     
-    async def chat_history(self,event):
-            await self.send(text_data = json.dumps({
-                'message' : event['history1'],
-                'userid'  : event['userid'],
-            },cls=DjangoJSONEncoder))
-       
+
 
     def get_room_name(self, id1, id2):
         return f"{min(int(id1), int(id2))}_{max(int(id1), int(id2))}"
     
-    @sync_to_async
-    def get_chat_history(self,id1,id2):
-        message  = Message.objects.filter(
-                Q(sender_id = id1, receiver_id = id2)| 
-                Q(sender_id = id2, receiver_id = id1)
-            ).order_by('timestamp').values(
-                'sender__username', 'content', 'timestamp')
-        return list(message)
 
-class GroupConsumer(AsyncWebsocketConsumer):
+
+class GroupConsumer(AsyncWebsocketConsumer):        
     async def connect(self):
         self.me = self.scope.get('user_id')
         self.user = self.scope['user'].username
@@ -108,8 +102,6 @@ class GroupConsumer(AsyncWebsocketConsumer):
             await self.send(text_data=json.dumps({'error':'not authenticated'}))
             await self.close()
             return
-
-
 
         # ------------------- check membership --------------------------------------
         country, created = await sync_to_async(Group.objects.get_or_create)(group_name=self.group_name)
@@ -133,6 +125,8 @@ class GroupConsumer(AsyncWebsocketConsumer):
                 'error': 'you are not a member, wait for admin approval'
             }))
             await self.close()
+
+     
 
     async def disconnect(self,code):
         await self.channel_layer.group_discard(self.group_name, self.channel_name)
