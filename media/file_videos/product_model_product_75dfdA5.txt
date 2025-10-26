@@ -1,0 +1,23 @@
+>product model 
+product_name
+price
+descp 
+color
+category -> fk
+brand -> fk
+product_image
+video
+
+user choices
+is_fav boolean
+is_wishlist boolean
+add_to_Cart boolean
+user fk
+product fk
+
+brand model
+brand_name
+
+category model 
+category name
+

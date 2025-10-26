@@ -9,6 +9,9 @@ from rest_framework.views import APIView
 from rest_framework import filters
 from rest_framework.permissions import IsAuthenticated
 from django.db.models import Q
+from django.shortcuts import get_object_or_404
+from .models import AttachmentPersonal, User,Message
+from .serializers import AttachmentPersonalSerializer
 
 class ProfileView(CreateAPIView,ListAPIView):
     permission_classes = [IsAuthenticated]
@@ -42,18 +45,64 @@ class SearchAll(APIView):
     def get(self,request):
         search = self.request.query_params.get('search',None)
         if search:
-           
-            v2 = Message.objects.filter(sender=request.user).filter(Q(content__icontains=search) | Q(receiver__username__icontains=search) | Q(sender__username__icontains=search)).select_related('sender','receiver')
 
-            v1 = GroupMessage.objects.filter(group_member__user_name=request.user).filter(Q(content__icontains=search) | Q(group_name1__group_name__icontains=search) | Q(sender__username__icontains=search)).select_related('sender','group_name1','group_member')
+            v2 = Message.objects.filter(sender=request.user).filter(Q(content__icontains=search) | Q(receiver__username__icontains=search) | Q(sender__username__icontains=search)).select_related('sender','receiver')
+        
+            v1 = GroupMessage.objects.filter(group_member__id=request.user.id).filter(Q(content__icontains=search) | Q(group_name1__group_name__icontains=search) | Q(sender__username__icontains=search)).select_related('sender','group_name1','group_member')
                 
  
             native = GroupSerializer(v1,many=True)
             native2 = MessageSerializer(v2,many=True)
 
             return Response({'message' : native.data , 
-                                'message2' : native2.data})  
-            
+                                'message2' : native2.data
+                                })  
 
-           
-           
+
+
+
+class UploadImagePersonal(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+    def post(self,request,id):
+        reciever = get_object_or_404(User,id=id)
+        messages = request.data.get("message","file_attachement")
+        photos = request.FILES.getlist("photos")
+        files = request.FILES.getlist("files_i")
+            
+        message = Message.objects.create(
+            receiver_id = reciever.id,
+            sender_id = request.user.id,
+            content = messages
+        )
+        print('------------')
+        print(message,'------------message personal')
+        attachments = []
+        if files:
+            for f in files:  
+               attachments .append (AttachmentPersonal.objects.create(
+                    files_i = f,
+                    message = message,
+                )
+               )
+        
+        if photos: 
+            for p in photos:
+               attachments.append(AttachmentPersonal.objects.create(
+                    photos = p,
+                    message = message,
+                ))
+
+        serializer = AttachmentPersonalSerializer(attachments,many=True)
+
+        return Response({
+            "message": "Attachment uploaded successfully",
+            "chat_message_id": message.id,
+            'sender': request.user.id,
+            'reciever' : reciever.id,
+            "attachment": serializer.data
+        }, status=status.HTTP_201_CREATED)
+
+
+class UploadImageGroup(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+    

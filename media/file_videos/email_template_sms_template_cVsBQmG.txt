@@ -1,0 +1,9 @@
+->email-template,sms-template,bulk-sms
+->creating chapter association -> domain must be unique in frontend, but in backend its taking duplicate
+->method patch xa twra phonenumber already exists,email already exists-> inspect, first_name last_name required-> postman
+-> membership number jpt halda ni add member vayo
+->fiances/payment option, managers not working
+-> no changes in frontend while PATCH from backend in cms/website detail
+-> cms/add_interest -> backend bata vayena POST despite saying created successfully not showing in frontend as well as in postman
+-> only patch works in cms/RUD_discussionforum
+-> esewa ma click garda error plan detail garda 

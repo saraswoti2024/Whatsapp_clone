@@ -54,3 +54,18 @@ group
                 'message' : event['history1'],
                 'username'  : event['username'],
             },cls=DjangoJSONEncoder))
+
+#done
+1.profile create
+2. personal chat
+3.personal chat history
+4. group chat
+5. group chat history
+6. admin approval to join group 
+7. search inside personal chat
+8. search inside group chat
+9. all chat of authenticated user search (group,personal)
+
+
+#baki 
+1. image,file attachment
