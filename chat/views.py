@@ -10,7 +10,7 @@ from rest_framework import filters
 from rest_framework.permissions import IsAuthenticated
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
-from .models import AttachmentPersonal, User,Message
+from .models import AttachmentPersonal, User,Message,GroupMessage
 from .serializers import AttachmentPersonalSerializer
 
 class ProfileView(CreateAPIView,ListAPIView):
@@ -105,4 +105,43 @@ class UploadImagePersonal(APIView):
 
 class UploadImageGroup(APIView):
     permission_classes = [permissions.IsAuthenticated]
-    
+    def post(self,request,grp_name):
+        grp_receiver = get_object_or_404(Group,group_name=grp_name)
+        message = request.data.get('message','')
+        
+        files_i = request.FILES.getlist('files_i')
+        photos = request.FILES.getlist('photos')
+
+        try: 
+            member =  GroupMember.objects.get(user_name = request.user.id,group_name=grp_receiver)
+        except GroupMember.DoesNotExist:
+            return Response({'message': 'not a member'})
+
+        grp_msg = GroupMessage.objects.create(
+            sender_id = request.user.id,
+            content = message,
+            group_name1 = grp_receiver,   
+        )
+        attachments_grp = []
+        if photos:
+            for p in photos:
+                attachments_grp.append(AttachmentGroup.objects.create(
+                    photos = p,
+                    group_msg = grp_msg,
+                    group_name = grp_receiver,
+                    ))
+
+        if files_i:
+            for f in files_i:
+                attachments_grp.append(AttachmentGroup.objects.create(
+                files_i = f,
+                group_msg = grp_msg,
+                group_name = grp_receiver,
+                ))
+        serializer = AttachmentGroupSerializer(attachments_grp,many=True)
+
+        return Response({
+            'attachments': serializer.data,
+            'sender' : request.user.id,
+            'group_name' : grp_name,
+        })

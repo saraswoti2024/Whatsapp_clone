@@ -164,11 +164,27 @@ class GroupConsumer(AsyncWebsocketConsumer):
 #-------------------------history------------------------# 
     @sync_to_async
     def get_chat_history(self,group,me):
-        message  = GroupMessage.objects.filter(Q(group_name1__id = group.id)).order_by('-timestamp').values(
-                'sender__username', 'content', 'timestamp','group_name1__group_name')
-        return list(message) 
+        message  = GroupMessage.objects.filter(Q(group_name1__id = group.id)).order_by('-timestamp')
+        history = []
+        for m in message:
+            history.append({
+                'sender' : m.sender.id,
+                'content' : m.content,
+                'send_at' : m.timestamp,
+                'group_name' : m.group_name1.group_name,
+                "attachments": [
+                    {
+                        "id": att.id,
+                        "photos": att.photos.url if att.photos else None,
+                        "files_i": att.files_i.url if att.files_i else None,
+                        "timestamp": att.timestamp.isoformat(),
+                    }
+                    for att in m.group_attachments.all()
+                ]
+            })
+        
+        return history 
      
-
     async def disconnect(self,code):
         await self.channel_layer.group_discard(self.group_name, self.channel_name)
 
